@@ -1,0 +1,17 @@
+{
+    "comments": {
+        "lineComment": {"comment":";"}
+    },
+    "brackets": [
+        ["[", "]"],
+        ["(", ")"]
+    ],
+    "autoClosingPairs": [
+        ["[", "]"],
+        ["(", ")"]
+    ],
+    "surroundingPairs": [
+        ["[", "]"],
+        ["(", ")"]
+    ]
+}

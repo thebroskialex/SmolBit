@@ -28,10 +28,10 @@ EX.
 
 # Installation
 
-1. Copy the smolbitsyn-1.0.0 folder to your VS Code extensions directory:
-
-- Windows: %USERPROFILE%\.vscode\extensions
-
-- macOS/Linux: ~/.vscode/extensions
-
-2. Restart VS Code
+1. Install the VSIX file
+2. Open VSCode
+3. Press Ctrl+Shift+X (or open the Extensions sidebar tab)
+4. Press Views and More Actions (the three dots in the corner of the Extensions window)
+5. Click Install from VSIX...
+6. Navigate to the VSIX file and open it
+7. Restart VSCode

@@ -1,59 +1,59 @@
-codes = {
+codes_3 = {
     # ----- NOP -----
-    '.': "000",
+    'NOP': "000",
 
     # ----- Manipulation (001 mnip) -----
-    '>': "001000",   # increment
-    '<': "001001",   # decrement
-    '_': "001010",   # clear to 0
-    '~': "001011",   # clear to init
+    'INC': "001000",   # increment
+    'DEC': "001001",   # decrement
+    'CLZ': "001010",   # clear to 0
+    'CLI': "001011",   # clear to init
+    'PUS': "001100",  # PUSH
+    'POP': "001101",  # POP
 
     # ----- Page Select (010 int2) -----
-    '@': "010000",   # page 0
-    'A': "010001",   # page 1
-    'B': "010010",   # page 2
-    'C': "010011",   # page 3
-    'X': "010100",
-    'Y': "010101",
-    'Z': "010110",
-    '&': "010111",
+    'PG1': "010000",   # page 0
+    'PG2': "010001",   # page 1
+    'PG3': "010010",   # page 2
+    'PG4': "010011",   # page 3
+    'PG5': "010100",
+    'PG6': "010101",
+    'PG7': "010110",
+    'PG8': "010111",
 
     # ----- Arithmetic (011 armd) -----
-    '+': "011000",  # add
-    '-': "011001",  # sub
-    '*': "011010",  # mul
-    '/': "011011",  # div
-    '=': "011100",  # set A = B
-    '#': "011101",  # set A = byte (no B)
-    '^': "011110",  # exponent
-    'v': "011111",  # root
+    'ADD': "011000",  # add
+    'SUB': "011001",  # sub
+    'MUL': "011010",  # mul
+    'DIV': "011011",  # div
+    'SET': "011100",  # set A = B
+    'LDI': "011101",  # set A = byte (no B)
+    'POW': "011110",  # exponent
+    'ROT': "011111",  # root
 
     # ----- Display (100 addr dpmd) -----
-    'p': "10000",  # display utf8
-    '%': "10001",  # display decimal
-    'h': "10010",  # display hex
-    'P': "10011",  # display utf8 (immediate)
+    'DPU': "10000",  # display utf8
+    'DPD': "10001",  # display decimal
+    'DPH': "10010",  # display hex
+    'DPI': "10011",  # display utf8 (immediate)
 
     # ----- Block instructions (101 blok) -----
-    '?': "101000",  # IF
-    'R': "101001",  # REPEAT
-    'F': "101010",  # FUNCTION DEF
-    'U': "101011",  # UNDEF
-    'J': "101100",  # CALL
-    'L': "1011010",  # FOR
-    'V': "1011011",
-    'W': "101110",  # WHILE
-    's': "1011110",  # PUSH
-    'S': "1011111",  # POP
+    'IF': "101000",  # IF
+    'REP': "101001",  # REPEAT
+    'DEF': "101010",  # FUNCTION DEF
+    'UDF': "101011",  # UNDEF
+    'CLL': "101100",  # CALL
+    'FOR': "1011010",  # FOR
+    'VFR': "1011011",
+    'WHL': "101110",  # WHILE
 
     # ----- Block end -----
     ']': "110",
 
     # ----- IO (111 iocd) -----
-    'x': "11100",   # exit ok
-    'E': "11101",   # exit error
-    'H': "11110",   # await hex → next nibble = addr
-    'D': "11111",   # await decimal → next nibble = addr
+    'EXO': "11100",   # exit ok
+    'EXE': "11101",   # exit error
+    'INH': "11110",   # await hex → next nibble = addr
+    'IND': "11111",   # await decimal → next nibble = addr
 
     # ----- Nibbles (operands) -----
     '0': "0000",
@@ -74,10 +74,10 @@ codes = {
     'f': "1111",
 
     # ----- 2-bit numbers -----
-    'i':'00',
-    'j':'01',
-    'k':'10',
-    'l':'11'
+    '=':'00',
+    '<':'01',
+    '>':'10',
+    '!':'11'
 }
 
 def binaryToBytes(binary:str):
@@ -90,28 +90,49 @@ def binaryToBytes(binary:str):
     byte = byte.to_bytes((len(binary) // 8), byteorder="big")
     return byte
 
-def convert(bitcode:str, file:str=False):
+def splitCode(bitcode:str):
+    split = []
     bitcode = bitcode.replace("[", "").replace("(", "").replace(")", "")
-    
-    bits = ""
-    skip = False
+    singles = "0123456789abcdef]=<>!"
+    doubles = ["IF"]
+    skip=False
+    skipL = 0
     for i, ch in enumerate(bitcode):
         if(ch == ";"):
             skip = not skip
             continue
         if(skip):
             continue
+        if(skipL):
+            skipL-=1
+            continue
         if ch.isspace():
             continue
-        if ch in codes:
-            bits += codes[ch]
+        if ch in singles:
+            split.append(ch)
+        elif bitcode[i:i+2] in doubles:
+            split.append(bitcode[i:i+2])
+            skipL = 1
+        else:
+            split.append(bitcode[i:i+3])
+            skipL = 2
+    if(skip):
+        print("Unclosed comment: please ensure all comments are closed correctly and try again")
+        return None
+    return split
+
+def convert(bitcode:str, file:str=False):
+    bitcode = splitCode(bitcode.replace("[", "").replace("(", "").replace(")", ""))
+    
+    bits = ""
+    for i, ch in enumerate(bitcode):
+
+        if ch in codes_3:
+            bits += codes_3[ch]
         else:
             print(f"COMPILATION ERROR: Illegal character '{ch}' found at position {i}")
             print(f"Context: ...{bitcode[max(0, i-5):i+5]}...")
             return None
-    if(skip):
-        print("Unclosed comment: please ensure all comments are closed correctly and try again")
-        return None
     if(file):
         file = open(file, "wb")
         file.write(binaryToBytes(bits))

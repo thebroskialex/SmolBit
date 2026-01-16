@@ -10,7 +10,7 @@ class checker():
         self.blockdepth = 0
         self.blockslist = []
 
-        self.ignored = "()["
+        self.ignored = "()[]"
         self.numbers = "1234567890abcdef"
         self.boolops = "ijkl"
         self.booloptable = {
@@ -69,152 +69,163 @@ class checker():
     
     def check(self):
         while not self.pos >= len(self.bitcode):
-            operation = self.read(1)
-            if(operation in self.numbers):
-                raise SyntaxError(f"{operation} at {self.lastpos} is not an operation")
+            char = self.read(1, False)
+            if char.isspace() or char in self.ignored:
+                if char == "]":
+                    self.read(1, True)
+                    self.blockdepth -= 1
+                    if len(self.blockslist):
+                        print(f"END {self.blockslist.pop()}")
+                    if self.blockdepth < 0 and not self.pos+1>len(self.bitcode):
+                        print(f"{colorama.Fore.YELLOW}SyntaxWarning{colorama.Fore.RESET} ']' at {self.lastpos} will end the script, possibly prematurely. if this is intentional, ignore this message.")
+                    continue
+                self.read(1, True)
+                continue
+            if self.pos + 3 > len(self.bitcode):
+                break
 
-            if(operation == "P"):
-                n=self.expect(("num", 2))
-                print(f"Print immediate 0x{n} ({int(n, 16).to_bytes(1).decode()})")
-            elif(operation == "p"):
-                n=self.expect(("num",1))
-                print(f"Print register {n} (utf8)")
-            elif(operation == "%"):
-                n=self.expect(("num",1))
-                print(f"Print register {n} (dec)")
-            elif(operation == "h"):
-                n=self.expect(("num",1))
-                print(f"Print register {n} (hex)")
-            elif(operation == "+"):
-                n=self.expect(("num",2))
-                m=n[1]
-                n=n[0]
-                print(f"reg{n} = reg{n} + reg{m}")
-            elif(operation == "-"):
-                n=self.expect(("num",2))
-                m=n[1]
-                n=n[0]
-                print(f"reg{n} = reg{n} - reg{m}")
-            elif(operation == "*"):
-                n=self.expect(("num",2))
-                m=n[1]
-                n=n[0]
-                print(f"reg{n} = reg{n} * reg{m}")
-            elif(operation == "/"):
-                n=self.expect(("num",2))
-                m=n[1]
-                n=n[0]
-                print(f"reg{n} = reg{n} / reg{m}")
-            elif(operation == "="):
-                n=self.expect(("num",2))
-                m=n[1]
-                n=n[0]
-                print(f"reg{n} = reg{m}")
-            elif(operation == "#"):
-                n=self.expect(("num",1), False)
-                m=self.expect(("num",2))
-                print(f"reg{n} = 0x{m}")
-            elif(operation == ">"):
-                n=self.expect(("num",1))
-                print(f"INC reg{n}")
-            elif(operation == "<"):
-                n=self.expect(("num",1))
-                print(f"DEC reg{n}")
-            elif(operation == "_"):
-                n=self.expect(("num", 1))
-                print(f"reg{n} = 0")
-            elif(operation == "~"):
-                n=self.expect(("num", 1))
-                print(f"reg{n} = {int({n}, base=16)}")
-            elif(operation == "^"):
-                n=self.expect(("num",2))
-                m=n[1]
-                n=n[0]
-                print(f"reg{n} = reg{n} ^ reg{m}")
-            elif(operation == "v"):
-                n=self.expect(("num",2))
-                m=n[1]
-                n=n[0]
-                print(f"reg{n} = (reg{m})root of reg{n}")
-            elif(operation == "]"):
-                self.blockdepth-=1
-                if(len(self.blockslist)):
-                    print(f"END{self.blockslist.pop()}")
-                if(self.blockdepth<0 and not self.pos + 1 > len(self.bitcode)):
-                    print(f"{colorama.Fore.YELLOW}SyntaxWarning{colorama.Fore.RESET} ']' at {self.lastpos} will end the script, possibly prematurely. if this is intentional, ignore this message.")
-            elif(operation == "?"):
+            operation = self.read(2)
+
+            if(operation == "IF"):
                 self.blockdepth+=1
                 self.blockslist.append("IF")
                 n = self.expect(("num",1))
                 o = self.expect(["boolop"])
                 m = self.expect(("num",1))
                 print(f"IF reg{n} {self.booloptable[o]} reg{m}")
-            elif(operation == "R"):
+                continue
+            
+            operation += self.read(1)
+
+            if(operation == "DPI"):
+                n=self.expect(("num", 2))
+                print(f"Print immediate 0x{n} ({int(n, 16).to_bytes(1).decode()})")
+            elif(operation == "DPU"):
+                n=self.expect(("num",1))
+                print(f"Print register {n} (utf8)")
+            elif(operation == "DPD"):
+                n=self.expect(("num",1))
+                print(f"Print register {n} (dec)")
+            elif(operation == "DPH"):
+                n=self.expect(("num",1))
+                print(f"Print register {n} (hex)")
+            elif(operation == "ADD"):
+                n=self.expect(("num",2))
+                m=n[1]
+                n=n[0]
+                print(f"reg{n} = reg{n} + reg{m}")
+            elif(operation == "SUB"):
+                n=self.expect(("num",2))
+                m=n[1]
+                n=n[0]
+                print(f"reg{n} = reg{n} - reg{m}")
+            elif(operation == "MUL"):
+                n=self.expect(("num",2))
+                m=n[1]
+                n=n[0]
+                print(f"reg{n} = reg{n} * reg{m}")
+            elif(operation == "DIV"):
+                n=self.expect(("num",2))
+                m=n[1]
+                n=n[0]
+                print(f"reg{n} = reg{n} / reg{m}")
+            elif(operation == "SET"):
+                n=self.expect(("num",2))
+                m=n[1]
+                n=n[0]
+                print(f"reg{n} = reg{m}")
+            elif(operation == "LDI"):
+                n=self.expect(("num",1), False)
+                m=self.expect(("num",2))
+                print(f"reg{n} = 0x{m}")
+            elif(operation == "INC"):
+                n=self.expect(("num",1))
+                print(f"INC reg{n}")
+            elif(operation == "DEC"):
+                n=self.expect(("num",1))
+                print(f"DEC reg{n}")
+            elif(operation == "CLZ"):
+                n=self.expect(("num", 1))
+                print(f"reg{n} = 0")
+            elif(operation == "CLI"):
+                n=self.expect(("num", 1))
+                print(f"reg{n} = {int({n}, base=16)}")
+            elif(operation == "POW"):
+                n=self.expect(("num",2))
+                m=n[1]
+                n=n[0]
+                print(f"reg{n} = reg{n} ^ reg{m}")
+            elif(operation == "ROT"):
+                n=self.expect(("num",2))
+                m=n[1]
+                n=n[0]
+                print(f"reg{n} = (reg{m})root of reg{n}")
+            elif(operation == "REP"):
                 self.blockdepth+=1
                 self.blockslist.append("REPEAT")
                 n = self.expect(("num",1))
                 print(f"REPEAT reg{n}")
-            elif(operation == "F"):
+            elif(operation == "DEF"):
                 self.blockdepth+=1
                 self.blockslist.append("FUNCDEF")
                 n = self.expect(("num",1))
                 print(f"FUNCDEF func{n}")
-            elif(operation == "U"):
+            elif(operation == "UDF"):
                 n = self.expect(("num",1))
                 print(f"FUNCUNDEF func{n}")
-            elif(operation == "J"):
+            elif(operation == "CLL"):
                 n = self.expect(("num",1))
                 print(f"FUNCCALL func{n}")
-            elif(operation == "L"):
+            elif(operation == "FOR"):
                 self.blockdepth+=1
                 self.blockslist.append("FOR")
                 n = self.expect(("num",1), False)
                 m = self.expect(("num",2))
                 print(f"FOR (reg{n}=1; reg{n}<={int(m, 16)}; reg{n}++)")
-            elif(operation == "V"):
+            elif(operation == "VFR"):
                 self.blockdepth+=1
                 self.blockslist.append("FOR")
                 n = self.expect(("num",1), False)
                 m = self.expect(("num",1))
                 print(f"FOR (reg{n}=1; reg{n}<=reg{m}; reg{n}++)")
-            elif(operation == "W"):
+            elif(operation == "WHL"):
                 self.blockdepth+=1
                 self.blockslist.append("WHILE")
                 n = self.expect(("num",1))
                 o = self.expect(["boolop"])
                 m = self.expect(("num",1))
                 print(f"WHILE reg{n} {self.booloptable[o]} reg{m}")
-            elif(operation == "@"):
+            elif(operation == "PG1"):
                 print("PAGE 0")
-            elif(operation == "A"):
+            elif(operation == "PG2"):
                 print("PAGE 1")
-            elif(operation == "B"):
+            elif(operation == "PG3"):
                 print("PAGE 2")
-            elif(operation == "C"):
+            elif(operation == "PG4"):
                 print("PAGE 3")
-            elif(operation == "X"):
+            elif(operation == "PG5"):
                 print("PAGE 4")
-            elif(operation == "Y"):
+            elif(operation == "PG6"):
                 print("PAGE 5")
-            elif(operation == "Z"):
+            elif(operation == "PG7"):
                 print("PAGE 6")
-            elif(operation == "&"):
+            elif(operation == "PG8"):
                 print("PAGE 7")
-            elif(operation == "s"):
+            elif(operation == "PUS"):
                 n = self.expect(("num", 1))
                 print(f"PUSH reg{n}")
-            elif(operation == "S"):
+            elif(operation == "POP"):
                 n = self.expect(("num", 1))
                 print(f"POP to reg{n}")
-            elif(operation == "D"):
+            elif(operation == "IND"):
                 n=self.expect(("num",1))
                 print(f"INPUT to reg{n} (dec)")
-            elif(operation == "H"):
+            elif(operation == "INH"):
                 n=self.expect(("num",1))
                 print(f"INPUT to reg{n} (hex)")
-            elif(operation == "E"):
+            elif(operation == "EXE"):
                 print(f"EXIT (error)")
-            elif(operation == "x"):
+            elif(operation == "EXO"):
                 print(f"EXIT (no error)")
         if(self.blockdepth>0):
             print(f"Unclosed block found, possibly a {self.blockslist.pop()}")

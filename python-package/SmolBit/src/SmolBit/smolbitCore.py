@@ -102,6 +102,7 @@ class VM:
         elif mode == 1: v = (v - 1) & 0xFF
         elif mode == 2: v = 0
         elif mode == 3: v = addr  # init value = address index
+        elif mode == 4: v = v ; a=1
         self.set(addr, v)
 
     # ---------------------------------------------------------
@@ -351,12 +352,7 @@ class VM:
         # 111 UNASIGNED
         # ---------------------------------------------------------
         elif blk_type == 7:
-            mode = bs.read(1)
-            addr = bs.read(4)
-            if(mode == "0"):
-                self.stack.append(self.get(addr))
-            elif(mode == "1"):
-                self.set(addr, self.stack.pop())
+            return
 
 
 # =============================================================

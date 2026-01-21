@@ -68,9 +68,9 @@ class VM:
         if mode == 0:   # utf-8 char
             print(chr(value), end='')
         elif mode == 1:  # decimal
-            print(value)
+            print(value, end="")
         elif mode == 2:  # hex
-            print(hex(value)[2:].upper())
+            print(hex(value)[2:].upper(), end="")
         elif mode == 3:  # utf-8 char (immediate)
             print(chr(value), end="")
 

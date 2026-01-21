@@ -8,7 +8,7 @@ SmolBit is a low-level, character-based assembly language designed for a custom 
 * **Pages**: The VM features 8 memory pages (Page 0–7).
 * **Registers**: Each page contains 16 registers (0–f).
 * **Global Register**: Register `f` is mirrored across all pages; changing it on Page 0 changes it on all others.
-* **Data**: Values are stored as 16-bit unsigned integers.
+* **Data**: Values are stored as 32-bit unsigned integers.
 
 ---
 

@@ -96,11 +96,23 @@ def splitCode(bitcode:str):
     bitcode = bitcode.replace("[", "").replace("(", "").replace(")", "")
     singles = "0123456789abcdef]=<>!"
     doubles = ["IF"]
+    quotes = ['"', "'"]
+    activeQuote = None
     skip=False
+    quoteChars = ""
     skipL = 0
     for i, ch in enumerate(bitcode):
         if(ch == ";"):
             skip = not skip
+            continue
+        if(ch == activeQuote):
+            activeQuote = None
+            for char in quoteChars:
+                split.append("DPI")
+                split.extend(list(char.encode().hex()))
+            continue
+        if(activeQuote != None):
+            quoteChars += ch
             continue
         if(skip):
             continue
@@ -111,6 +123,11 @@ def splitCode(bitcode:str):
             continue
         if ch in singles:
             split.append(ch)
+        elif ch in quotes:
+            if split[-1] != "DPI":
+                raise ValueError("Unexpected quote")
+            activeQuote = ch
+            split.pop()
         elif bitcode[i:i+2] in doubles:
             split.append(bitcode[i:i+2])
             skipL = 1

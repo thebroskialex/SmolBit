@@ -19,6 +19,7 @@ class checker():
             ">":">=",
             "!":"!="
         }
+        self.quotes = ['"', "'"]
     
     def read(self, n, incpos=True):
         if self.pos + n > len(self.bitcode):
@@ -59,12 +60,18 @@ class checker():
                     return self.expect(["boolop"])
         elif(mode[0]=="all"):
             num = ''
+            if(not mode[2]):
+                if isinstance(mode, tuple):
+                    mode = list(mode)
+                mode[1] = 1
             for i in range(mode[1]):
                 nextnum = self.read(1)
                 if(nextnum.isspace() or nextnum in self.ignored):
-                    num+=self.expect(("all",1), False)
+                    num+=self.expect(("all",1,mode[2]), False)
                 else:
                     num+=nextnum
+                    if(not mode[2]):
+                        self.bitcode = nextnum + self.bitcode
             return num
     
     def check(self, printB = False):
@@ -101,9 +108,19 @@ class checker():
             operation += self.read(1)
 
             if(operation == "DPI"):
-                n=self.expect(("num", 2))
-                if printB:
-                    print(f"Print immediate 0x{n} ({int(n, 16).to_bytes(1).decode()})")
+                c = self.expect(('all', 1, False))
+                if(c in self.quotes):
+                    usedQuote = c
+                    chars = ""
+                    while not char == usedQuote:
+                        char = self.read(1, True)
+                        chars += char
+                    if printB:
+                        print(f"Print immediate \"{chars}\"")
+                else:
+                    n=self.expect(("num", 2))
+                    if printB:
+                        print(f"Print immediate 0x{n} ({int(n, 16).to_bytes(1).decode()})")
             elif(operation == "DPU"):
                 n=self.expect(("num",1))
                 if printB:

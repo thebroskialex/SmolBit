@@ -10,7 +10,7 @@ class BitStream:
     def read(self, n):
         """Read n bits as a string."""
         if self.pos + n > len(self.bits):
-            raise RuntimeError("Unexpected end of bitstream")
+            raise RuntimeError(f"Unexpected end of bitstream")
         out = self.bits[self.pos:self.pos+n]
         self.pos += n
         return out
@@ -57,7 +57,7 @@ class VM:
         return self.pages[self.page][addr]
 
     def set(self, addr, value):
-        self.pages[self.page][addr] = value & 0xFFFF
+        self.pages[self.page][addr] = value & 0xFFFFFFFF
         for p in range(8):
             self.pages[p][15] = self.pages[self.page][15]
 

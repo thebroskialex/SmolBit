@@ -15,6 +15,10 @@ compile [smolbit file] [smbt path] | compiles the smolbit script to an ambt file
         bitcode = sys.argv[2]
         vm = VM(bitcode)
         vm.run()
+    elif(sys.argv[1] == "debugrun"):
+        bitcode = sys.argv[2]
+        vm = VM(bitcode, True)
+        vm.run(debug=True)
     elif sys.argv[1] == "compile":
         path = sys.argv[2]
         save = sys.argv[3]

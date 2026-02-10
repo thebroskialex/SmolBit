@@ -3,9 +3,10 @@
 # =============================================================
 
 class BitStream:
-    def __init__(self, bits: str):
+    def __init__(self, bits: str, debug = False):
         self.bits = bits.replace(" ","").replace("\n", "")
         self.pos = 0
+        self.debug = debug
 
     def read(self, n):
         """Read n bits as a string."""
@@ -13,6 +14,8 @@ class BitStream:
             raise RuntimeError(f"Unexpected end of bitstream")
         out = self.bits[self.pos:self.pos+n]
         self.pos += n
+        if(self.debug):
+            print("r:", out)
         return out
 
     def peek(self, n):
@@ -29,13 +32,13 @@ class BitStream:
 # =============================================================
 
 class VM:
-    def __init__(self, bitcode: str):
+    def __init__(self, bitcode: str, debug=False):
         if(all(b in "01" for b in bitcode)):
-            self.code = BitStream(bitcode)
+            self.code = BitStream(bitcode, debug)
         else:
             try:
                 with open(bitcode, "rb") as file:
-                    self.code = BitStream(''.join(format(byte, '08b') for byte in file.read()))
+                    self.code = BitStream(''.join(format(byte, '08b') for byte in file.read()), debug)
             except:
                 raise ValueError("bitcode argument was improperly formatted")
         # 4 pages × 16 addresses × 16-bit values
@@ -126,13 +129,15 @@ class VM:
     # ---------------------------------------------------------
     # EXECUTION ENGINE
     # ---------------------------------------------------------
-    def run(self, bs=None):
+    def run(self, bs=None, debug=False):
         """Run starting at current code position or from a BitStream."""
         if bs is None:
             bs = self.code
 
         while not bs.eof():
             op = bs.read(3)
+            if(debug):
+                print('tlo')
 
             # -------------------------------------------------
             # 000 NOP
@@ -183,7 +188,7 @@ class VM:
             # 101 %blok
             # -------------------------------------------------
             elif op == "101":
-                self.handle_block(bs)
+                self.handle_block(bs, debug)
 
             # -------------------------------------------------
             # 110 block terminator
@@ -222,12 +227,14 @@ class VM:
     # ---------------------------------------------------------
     # BLOCK PROCESSING (IF, REPEAT, FOR, WHILE, FUNCTIONS)
     # ---------------------------------------------------------
-    def collect_block(self, bs):
+    def collect_block(self, bs, debug):
         """Collect raw bits until the ending 110 marker."""
         chunk = ""
         depth = 1
         while True:
             op = bs.read(3)
+            if(debug):
+                print(f"{depth}lo")
             chunk += op
             if op == "101":  # nested block
                 # add its type and keep nesting
@@ -245,9 +252,18 @@ class VM:
                         blk_type += mode + bs.read(8)
                 elif(blk_type == "001"):
                     blk_type+=bs.read(4)
+                elif(blk_type == "111"):
+                    leng = bs.read(16)
+                    blk_type+=leng
+                    blk_type += bs.read(self.read_int(leng)*8)
+                    depth -= 1
                 chunk += blk_type
                 depth += 1
+                if(debug):
+                    print(f"{blk_type}; depth = {depth}")
             elif op == "110":
+                if(debug):
+                    print("depth =", depth)
                 depth -= 1
                 if depth == 0:
                     break
@@ -263,11 +279,11 @@ class VM:
         if op == "010": return bs.read(3)
         if op == "011": 
             mode = bs.read(3)
-            opnds = mode + bs.read(4)
-            if(not mode == "101"):
-                opnds+=bs.read(4)
+            if(mode == "101"):
+                n = (bs.read(2))
+                opnds = mode + n + bs.read(4) + bs.read(8*(self.read_int(n)+1))
             else:
-                opnds+=bs.read(8)
+                opnds= mode + bs.read(8)
             return opnds
         if op == "100": 
             mode = bs.read(2)
@@ -281,7 +297,7 @@ class VM:
             return iocd
         return ""
 
-    def handle_block(self, bs):
+    def handle_block(self, bs, debug):
         """Processes a %blok instruction."""
         blk_type = self.read_int(bs.read(3))
 
@@ -292,7 +308,7 @@ class VM:
             a1 = self.read_int(bs.read(4))
             cond = self.read_int(bs.read(2))
             a2 = self.read_int(bs.read(4))
-            body_bits = self.collect_block(bs)
+            body_bits = self.collect_block(bs, debug)
             if self.cond(cond, a1, a2):
                 self.run(BitStream(body_bits))
 
@@ -301,7 +317,7 @@ class VM:
         # ---------------------------------------------------------
         elif blk_type == 1:
             count = self.get(self.read_int(bs.read(4)))
-            body_bits = self.collect_block(bs)
+            body_bits = self.collect_block(bs, debug)
             for _ in range(count):
                 self.run(BitStream(body_bits))
 
@@ -310,7 +326,7 @@ class VM:
         # ---------------------------------------------------------
         elif blk_type == 2:
             fid = self.read_int(bs.read(4))
-            body_bits = self.collect_block(bs)
+            body_bits = self.collect_block(bs, debug)
             self.functions[fid] = body_bits
 
         # ---------------------------------------------------------
@@ -338,7 +354,7 @@ class VM:
                 count = self.read_int(bs.read(8))
             else:
                 count = self.get(self.read_int(bs.read(4)))
-            body_bits = self.collect_block(bs)
+            body_bits = self.collect_block(bs,debug)
             for i in range(1, count+1):
                 self.set(addr, i)
                 self.run(BitStream(body_bits))
@@ -350,15 +366,19 @@ class VM:
             adra = self.read_int(bs.read(4))
             cond = self.read_int(bs.read(2))
             adrb = self.read_int(bs.read(4))
-            body_bits = self.collect_block(bs)
+            body_bits = self.collect_block(bs, debug)
             while self.cond(cond, adra, adrb):
                 self.run(BitStream(body_bits))
 
         # ---------------------------------------------------------
-        # 111 UNASIGNED
+        # 111 DPM 
         # ---------------------------------------------------------
         elif blk_type == 7:
-            return
+            leng = self.read_int(bs.read(16))
+            utf = b""
+            for c in range(leng):
+                utf+=int(bs.read(8), 2).to_bytes(1)
+            print(utf.decode("utf-8"))
 
 
 # =============================================================

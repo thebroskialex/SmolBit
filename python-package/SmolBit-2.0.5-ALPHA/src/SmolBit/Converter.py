@@ -48,7 +48,7 @@ codes_3 = {
     'FOR': "1011010",  # FOR
     'VFR': "1011011",
     'WHL': "101110",  # WHILE
-    '   ': "101111",
+    'DPM': "101111",
 
     # ----- Block end -----
     ']': "110",
@@ -123,9 +123,11 @@ def splitCode(bitcode:str):
             continue
         if(ch == activeQuote):
             activeQuote = None
+            split.append("DPM")
+            quoteChars = [char.encode().hex() for char in quoteChars]
+            split.extend(list((len(''.join(["".join(_ for _ in quoteChars)]))//2).to_bytes(2).hex()))
             for char in quoteChars:
-                split.append("DPI")
-                split.extend(list(char.encode().hex()))
+                split.extend(list(char))
             quoteChars = ""
             continue
         if(activeQuote != None):

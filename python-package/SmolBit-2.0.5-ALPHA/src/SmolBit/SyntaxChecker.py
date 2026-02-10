@@ -106,7 +106,6 @@ class checker():
                 continue
             
             operation += self.read(1)
-
             if(operation == "DPI"):
                 c = self.expect(('all', 1, False))
                 if(c in self.quotes):
